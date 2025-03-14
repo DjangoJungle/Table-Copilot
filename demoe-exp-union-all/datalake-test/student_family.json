@@ -1,0 +1,227 @@
+{
+    "title": [
+        "Id",
+        "Father's Name",
+        "Mother's Name",
+        "Family Income ($)",
+        "Contact Number",
+        "Family Notes",
+        "Number of Siblings",
+        "Parental Education Level"
+    ],
+    "numCols": 8,
+    "numericColumns": [
+        0,
+        3,
+        4,
+        6
+    ],
+    "dateColumns": [],
+    "pgTitle": "",
+    "numDataRows": 20,
+    "secondTitle": "",
+    "numHeaderRows": 1,
+    "caption": "Student Family Information",
+    "data": [
+        [
+            "23CS0001",
+            "John",
+            "Mary",
+            "80000",
+            "1234567890",
+            "Supportive family environment",
+            "2",
+            "Both college-educated"
+        ],
+        [
+            "22CS0076",
+            "Robert",
+            "Linda",
+            "90000",
+            "2345678901",
+            "Single parent household",
+            "1",
+            "High school diploma"
+        ],
+        [
+            "24MA0054",
+            "William",
+            "Jennifer",
+            "85000",
+            "4567890123",
+            "Extended family living together",
+            "4",
+            "Some college"
+        ],
+        [
+            "23MA0002",
+            "Michael",
+            "Patricia",
+            "75000",
+            "3456789012",
+            "Both parents working",
+            "3",
+            "Both college-educated"
+        ],
+        [
+            "23PH0003",
+            "James",
+            "Elizabeth",
+            "92000",
+            "5678901234",
+            "Supportive family environment",
+            "2",
+            "Both college-educated"
+        ],
+        [
+            "24PH0002",
+            "George",
+            "Barbara",
+            "78000",
+            "6789012345",
+            "Divorced parents",
+            "1",
+            "High school diploma"
+        ],
+        [
+            "23CH0004",
+            "Thomas",
+            "Dorothy",
+            "88000",
+            "7890123456",
+            "Both parents working",
+            "3",
+            "Some college"
+        ],
+        [
+            "23BI0005",
+            "Joseph",
+            "Margaret",
+            "76000",
+            "9012345678",
+            "Single parent household",
+            "1",
+            "High school diploma"
+        ],
+        [
+            "22CH0152",
+            "Frank",
+            "Nancy",
+            "95000",
+            "8901234567",
+            "Supportive family environment",
+            "2",
+            "Both college-educated"
+        ],
+        [
+            "24BI0057",
+            "Kenneth",
+            "Susan",
+            "82000",
+            "0123456789",
+            "Extended family living together",
+            "4",
+            "Some college"
+        ],
+        [
+            "24CS0196",
+            "Timothy",
+            "Lisa",
+            "77000",
+            "2345678901",
+            "Divorced parents",
+            "1",
+            "High school diploma"
+        ],
+        [
+            "23CS0006",
+            "Ronald",
+            "Karen",
+            "91000",
+            "1234567890",
+            "Supportive family environment",
+            "2",
+            "Both college-educated"
+        ],
+        [
+            "23MA0007",
+            "Jason",
+            "Heather",
+            "84000",
+            "3456789012",
+            "Both parents working",
+            "3",
+            "Some college"
+        ],
+        [
+            "24MA0059",
+            "Jeffrey",
+            "Melissa",
+            "93000",
+            "4567890123",
+            "Supportive family environment",
+            "2",
+            "Both college-educated"
+        ],
+        [
+            "23PH0008",
+            "Ryan",
+            "Ashley",
+            "79000",
+            "5678901234",
+            "Single parent household",
+            "1",
+            "High school diploma"
+        ],
+        [
+            "21PH0090",
+            "Brian",
+            "Sarah",
+            "86000",
+            "6789012345",
+            "Extended family living together",
+            "4",
+            "Some college"
+        ],
+        [
+            "23CH0009",
+            "Anthony",
+            "Hannah",
+            "94000",
+            "7890123456",
+            "Supportive family environment",
+            "2",
+            "Both college-educated"
+        ],
+        [
+            "22CH0032",
+            "Eric",
+            "Amy",
+            "78000",
+            "8901234567",
+            "Divorced parents",
+            "1",
+            "High school diploma"
+        ],
+        [
+            "23BI0010",
+            "Mark",
+            "Lauren",
+            "83000",
+            "9012345678",
+            "Both parents working",
+            "3",
+            "Some college"
+        ],
+        [
+            "24BI0062",
+            "Paul",
+            "Catherine",
+            "92000",
+            "0123456789",
+            "Supportive family environment",
+            "2",
+            "Both college-educated"
+        ]
+    ]
+}

@@ -1,0 +1,1 @@
+1	I am looking for unionable tables to stu_info that contain students with high grades.	stu_info

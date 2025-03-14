@@ -1,0 +1,204 @@
+{
+    "title": [
+        "Course ID",
+        "Course Name",
+        "Credits",
+        "Semester",
+        "Prerequisites",
+        "Instructor",
+        "Course Description"
+    ],
+    "numCols": 7,
+    "numericColumns": [
+        0,
+        2
+    ],
+    "dateColumns": [],
+    "pgTitle": "",
+    "numDataRows": 20,
+    "secondTitle": "",
+    "numHeaderRows": 1,
+    "caption": "Course Settings",
+    "data": [
+        [
+            "101",
+            "Calculus",
+            "4",
+            "Fall",
+            "None",
+            "Dr. John Doe",
+            "Introduction to differential and integral calculus"
+        ],
+        [
+            "102",
+            "Linear Algebra",
+            "4",
+            "Spring",
+            "Calculus",
+            "Dr. Jane Smith",
+            "Study of vector spaces, linear transformations, and matrices"
+        ],
+        [
+            "103",
+            "Physics I",
+            "3",
+            "Fall",
+            "None",
+            "Dr. Alice Johnson",
+            "Basic principles of mechanics and thermodynamics"
+        ],
+        [
+            "104",
+            "Chemistry I",
+            "3",
+            "Spring",
+            "None",
+            "Dr. Bob Brown",
+            "Fundamentals of general chemistry"
+        ],
+        [
+            "105",
+            "Calculus II",
+            "4",
+            "Spring",
+            "Calculus",
+            "Dr. John Doe",
+            "Advanced topics in differential and integral calculus"
+        ],
+        [
+            "106",
+            "Physics II",
+            "3",
+            "Spring",
+            "Physics I",
+            "Dr. Alice Johnson",
+            "Electricity, magnetism, and optics"
+        ],
+        [
+            "107",
+            "Chemistry II",
+            "3",
+            "Fall",
+            "Chemistry I",
+            "Dr. Bob Brown",
+            "Organic chemistry fundamentals"
+        ],
+        [
+            "108",
+            "Discrete Mathematics",
+            "3",
+            "Fall",
+            "None",
+            "Dr. Charles Lee",
+            "Study of discrete structures and algorithms"
+        ],
+        [
+            "109",
+            "Biology I",
+            "3",
+            "Fall",
+            "None",
+            "Dr. Diana Kim",
+            "Introduction to cell biology and genetics"
+        ],
+        [
+            "110",
+            "Computer Science I",
+            "4",
+            "Spring",
+            "None",
+            "Dr. Emily White",
+            "Programming fundamentals and algorithm design"
+        ],
+        [
+            "111",
+            "Calculus III",
+            "4",
+            "Fall",
+            "Calculus II",
+            "Dr. John Doe",
+            "Multivariable calculus and vector calculus"
+        ],
+        [
+            "112",
+            "Physics III",
+            "3",
+            "Fall",
+            "Physics II",
+            "Dr. Alice Johnson",
+            "Modern physics and quantum mechanics"
+        ],
+        [
+            "113",
+            "Chemistry III",
+            "3",
+            "Spring",
+            "Chemistry II",
+            "Dr. Bob Brown",
+            "Physical chemistry principles"
+        ],
+        [
+            "114",
+            "Data Structures",
+            "4",
+            "Spring",
+            "Computer Science I",
+            "Dr. Emily White",
+            "Advanced data structures and algorithms"
+        ],
+        [
+            "115",
+            "Biology II",
+            "3",
+            "Spring",
+            "Biology I",
+            "Dr. Diana Kim",
+            "Ecology and evolution"
+        ],
+        [
+            "116",
+            "Differential Equations",
+            "3",
+            "Spring",
+            "Calculus III",
+            "Dr. John Doe",
+            "Solving ordinary and partial differential equations"
+        ],
+        [
+            "117",
+            "Electronics I",
+            "3",
+            "Fall",
+            "Physics II",
+            "Dr. Alice Johnson",
+            "Basic principles of electronic circuits"
+        ],
+        [
+            "118",
+            "Organic Chemistry",
+            "3",
+            "Fall",
+            "Chemistry II",
+            "Dr. Bob Brown",
+            "Advanced topics in organic chemistry"
+        ],
+        [
+            "119",
+            "Algorithms",
+            "4",
+            "Fall",
+            "Data Structures",
+            "Dr. Emily White",
+            "Efficient algorithms and complexity analysis"
+        ],
+        [
+            "120",
+            "Biochemistry",
+            "3",
+            "Spring",
+            "Biology II",
+            "Dr. Diana Kim",
+            "Chemical processes in living organisms"
+        ]
+    ]
+}

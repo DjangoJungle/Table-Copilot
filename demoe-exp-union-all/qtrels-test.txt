@@ -1,0 +1,6 @@
+1	0	scholarship	2
+1	0	class_grades	0
+1	0	physics_grades	0
+1	0	pe_grades	0
+1	0	english_grades	0
+1	0	stu_club	0

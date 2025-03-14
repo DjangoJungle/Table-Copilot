@@ -1,0 +1,226 @@
+{
+    "title": [
+        "Id",
+        "Height (cm)",
+        "Weight (kg)",
+        "Blood Type",
+        "Check Date",
+        "Health Notes"
+    ],
+    "numCols": 6,
+    "numericColumns": [
+        0,
+        1,
+        2
+    ],
+    "dateColumns": [
+        4
+    ],
+    "pgTitle": "",
+    "numDataRows": 25,
+    "secondTitle": "",
+    "numHeaderRows": 1,
+    "caption": "Student Health Check",
+    "data": [
+        [
+            "23CS0001",
+            "170",
+            "60",
+            "O",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "23MA0002",
+            "180",
+            "70",
+            "A",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "24CS0063",
+            "170",
+            "60",
+            "O",
+            "15/03/2023",
+            "Mild allergies, well-managed"
+        ],
+        [
+            "24CH0036",
+            "175",
+            "65",
+            "AB",
+            "15/03/2023",
+            "Diabetes, well-managed"
+        ],
+        [
+            "23PH0003",
+            "165",
+            "55",
+            "B",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "22PH0015",
+            "165",
+            "55",
+            "B",
+            "15/03/2023",
+            "Asthma, controlled with medication"
+        ],
+        [
+            "23CH0004",
+            "175",
+            "65",
+            "AB",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "24MA0054",
+            "180",
+            "70",
+            "A",
+            "15/03/2023",
+            "High blood pressure, monitored"
+        ],
+        [
+            "23BI0005",
+            "168",
+            "58",
+            "O",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "22BI0003",
+            "168",
+            "58",
+            "O",
+            "15/03/2023",
+            "Frequent headaches, under investigation"
+        ],
+        [
+            "23CS0006",
+            "172",
+            "62",
+            "A",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "24CS0058",
+            "172",
+            "62",
+            "A",
+            "15/03/2023",
+            "Anemia, managed with supplements"
+        ],
+        [
+            "23MA0007",
+            "178",
+            "72",
+            "B",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "24MA0004",
+            "178",
+            "72",
+            "B",
+            "15/03/2023",
+            "Hypothyroidism, treated with medication"
+        ],
+        [
+            "23PH0008",
+            "167",
+            "57",
+            "AB",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "24PH0060",
+            "167",
+            "57",
+            "AB",
+            "15/03/2023",
+            "Epilepsy, controlled with medication"
+        ],
+        [
+            "23CH0009",
+            "173",
+            "63",
+            "O",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "24CH0532",
+            "173",
+            "63",
+            "O",
+            "15/03/2023",
+            "Arthritis, managed with physiotherapy"
+        ],
+        [
+            "24BI0062",
+            "169",
+            "59",
+            "A",
+            "15/03/2023",
+            "Chronic fatigue syndrome, monitored"
+        ],
+        [
+            "23BI0010",
+            "169",
+            "59",
+            "A",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "23CS0011",
+            "171",
+            "61",
+            "B",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "22CS0013",
+            "171",
+            "61",
+            "B",
+            "15/03/2023",
+            "Fibromyalgia, managed with medication"
+        ],
+        [
+            "23MA0012",
+            "182",
+            "75",
+            "AB",
+            "15/03/2023",
+            "Good health condition"
+        ],
+        [
+            "24MA0413",
+            "182",
+            "75",
+            "AB",
+            "15/03/2023",
+            "Lupus, treated with medication"
+        ],
+        [
+            "24PH0065",
+            "166",
+            "56",
+            "O",
+            "15/03/2023",
+            "Multiple sclerosis, managed with therapy"
+        ]
+    ]
+}

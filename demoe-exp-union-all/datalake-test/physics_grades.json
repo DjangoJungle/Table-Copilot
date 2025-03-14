@@ -1,0 +1,170 @@
+{
+    "title": [
+        "Id",
+        "Name",
+        "Major",
+        "Year",
+        "Physics Grade"
+    ],
+    "numCols": 5,
+    "numericColumns": [
+        0,
+        3,
+        4
+    ],
+    "dateColumns": [],
+    "pgTitle": "",
+    "numDataRows": 20,
+    "secondTitle": "",
+    "numHeaderRows": 1,
+    "caption": "Physics Grades",
+    "data": [
+        [
+            "23CS0001",
+            "Alice",
+            "Computer Science",
+            "2023",
+            "85"
+        ],
+        [
+            "22MA0034",
+            "Brian",
+            "Mathematics",
+            "2022",
+            "78"
+        ],
+        [
+            "21PH0056",
+            "Charlie",
+            "Physics",
+            "2021",
+            "92"
+        ],
+        [
+            "23CH0004",
+            "David",
+            "Chemistry",
+            "2023",
+            "88"
+        ],
+        [
+            "22BI0078",
+            "Eve",
+            "Biology",
+            "2022",
+            "85"
+        ],
+        [
+            "21CS0090",
+            "Frank",
+            "Computer Science",
+            "2021",
+            "76"
+        ],
+        [
+            "23MA0101",
+            "Grace",
+            "Mathematics",
+            "2023",
+            "87"
+        ],
+        [
+            "22PH0112",
+            " Hannah",
+            "Physics",
+            "2022",
+            "90"
+        ],
+        [
+            "21CH0134",
+            "Ian",
+            "Chemistry",
+            "2021",
+            "84"
+        ],
+        [
+            "23BI0145",
+            "Julia",
+            "Biology",
+            "2023",
+            "82"
+        ],
+        [
+            "22CS0156",
+            "Kevin",
+            "Computer Science",
+            "2022",
+            "79"
+        ],
+        [
+            "21MA0178",
+            "Laura",
+            "Mathematics",
+            "2021",
+            "83"
+        ],
+        [
+            "23PH0190",
+            "Michael",
+            "Physics",
+            "2023",
+            "91"
+        ],
+        [
+            "22CH0201",
+            "Natalie",
+            "Chemistry",
+            "2022",
+            "86"
+        ],
+        [
+            "21BI0212",
+            "Oliver",
+            "Biology",
+            "2021",
+            "80"
+        ],
+        [
+            "23CS0223",
+            "Patricia",
+            "Computer Science",
+            "2023",
+            "93"
+        ],
+        [
+            "22MA0234",
+            "Quincy",
+            "Mathematics",
+            "2022",
+            "77"
+        ],
+        [
+            "21PH0245",
+            "Rachel",
+            "Physics",
+            "2021",
+            "89"
+        ],
+        [
+            "23CH0256",
+            "Sam",
+            "Chemistry",
+            "2023",
+            "85"
+        ],
+        [
+            "22BI0267",
+            "Tina",
+            "Biology",
+            "2022",
+            "87"
+        ],
+        [
+            "21CS0278",
+            "Victor",
+            "Computer Science",
+            "2021",
+            "81"
+        ]
+    ]
+}

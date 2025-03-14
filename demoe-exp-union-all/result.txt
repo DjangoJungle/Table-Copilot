@@ -1,0 +1,6 @@
+docid: scholarship, pred: 24.311296463012695
+docid: class_grades, pred: 22.763933181762695
+docid: physics_grades, pred: -0.07293430715799332
+docid: pe_grades, pred: 0.2898607850074768
+docid: english_grades, pred: -0.3788466453552246
+docid: stu_club, pred: -0.6485490798950195

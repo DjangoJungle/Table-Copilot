@@ -1,0 +1,184 @@
+{
+    "title": [
+        "Id",
+        "Club Name",
+        "Position",
+        "Join Date",
+        "Activities",
+        "Achievements"
+    ],
+    "numCols": 6,
+    "numericColumns": [
+        0
+    ],
+    "dateColumns": [
+        3
+    ],
+    "pgTitle": "",
+    "numDataRows": 20,
+    "secondTitle": "",
+    "numHeaderRows": 1,
+    "caption": "Student Club Information",
+    "data": [
+        [
+            "21CS0010",
+            "Programming Club",
+            "Member",
+            "01/09/2021",
+            "Coding competitions, hackathons",
+            "Won 1st place in regional coding competition"
+        ],
+        [
+            "20MA0102",
+            "Math Club",
+            "Vice President",
+            "01/09/2020",
+            "Math Olympiads, problem-solving sessions",
+            "Published a paper on number theory"
+        ],
+        [
+            "21PH0047",
+            "Physics Society",
+            "Member",
+            "01/09/2021",
+            "Science fairs, research projects",
+            "Received an award for best physics project"
+        ],
+        [
+            "23CH0004",
+            "Chemistry Club",
+            "Secretary",
+            "01/09/2023",
+            "Lab experiments, chemistry quizzes",
+            "Presented at a national chemistry conference"
+        ],
+        [
+            "23BI0015",
+            "Biology Society",
+            "Member",
+            "01/09/2023",
+            "Field trips, biology seminars",
+            "Contributed to a published research paper"
+        ],
+        [
+            "23CS0006",
+            "AI Club",
+            "President",
+            "01/09/2020",
+            "AI workshops, machine learning projects",
+            "Developed an AI-based mobile app"
+        ],
+        [
+            "21MA0033",
+            "Statistics Club",
+            "Member",
+            "01/09/2021",
+            "Data analysis projects, statistical modeling",
+            "Completed a project on predictive analytics"
+        ],
+        [
+            "20PH0075",
+            "Astronomy Club",
+            "Vice President",
+            "01/09/2020",
+            "Stargazing events, astrophysics seminars",
+            "Led a team to build a small telescope"
+        ],
+        [
+            "21CH0056",
+            "Environmental Chemistry Club",
+            "Member",
+            "01/09/2021",
+            "Environmental research, green chemistry projects",
+            "Organized a campus-wide recycling initiative"
+        ],
+        [
+            "23BI0010",
+            "Genetics Club",
+            "Secretary",
+            "01/09/2023",
+            "Genetic engineering projects, bioinformatics workshops",
+            "Discovered a new genetic marker"
+        ],
+        [
+            "23CS0011",
+            "Cybersecurity Club",
+            "Member",
+            "01/09/2023",
+            "Ethical hacking challenges, cybersecurity seminars",
+            "Developed a new encryption algorithm"
+        ],
+        [
+            "23MA0012",
+            "Math Olympiad Team",
+            "Captain",
+            "01/09/2023",
+            "Competitive math events, problem-solving workshops",
+            "Won national math Olympiad"
+        ],
+        [
+            "21PH0091",
+            "Quantum Computing Club",
+            "Member",
+            "01/09/2021",
+            "Quantum computing simulations, quantum cryptography projects",
+            "Published a paper on quantum algorithms"
+        ],
+        [
+            "23CH0014",
+            "Chemical Engineering Club",
+            "Vice President",
+            "01/09/2023",
+            "Process design projects, chemical plant visits",
+            "Designed a new chemical reactor"
+        ],
+        [
+            "21BI0043",
+            "Molecular Biology Club",
+            "Member",
+            "01/09/2021",
+            "Protein structure analysis, gene editing workshops",
+            "Identified a new protein function"
+        ],
+        [
+            "23CS0016",
+            "Robotics Club",
+            "President",
+            "01/09/2023",
+            "Robot design competitions, automation projects",
+            "Built a robot for disaster relief"
+        ],
+        [
+            "23MA0065",
+            "Applied Mathematics Club",
+            "Member",
+            "01/09/2023",
+            "Mathematical modeling contests, industrial applications",
+            "Developed a new mathematical model for traffic flow"
+        ],
+        [
+            "23PH0018",
+            "Renewable Energy Club",
+            "Vice President",
+            "01/09/2023",
+            "Solar panel installations, wind energy projects",
+            "Led a project to install solar panels on campus"
+        ],
+        [
+            "23CH0019",
+            "Materials Science Club",
+            "Member",
+            "01/09/2023",
+            "Material testing, nanotechnology research",
+            "Discovered a new material with high strength"
+        ],
+        [
+            "23BI0020",
+            "Neuroscience Club",
+            "Secretary",
+            "01/09/2023",
+            "Brain imaging studies, neurobiology seminars",
+            "Published a paper on neural networks"
+        ]
+    ]
+}

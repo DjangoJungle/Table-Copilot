@@ -1,0 +1,226 @@
+{
+    "title": [
+        "School ID",
+        "School Name",
+        "Location",
+        "Enrollment",
+        "Year Established",
+        "School Type",
+        "Principal",
+        "Website"
+    ],
+    "numCols": 8,
+    "numericColumns": [
+        0,
+        3,
+        4
+    ],
+    "dateColumns": [],
+    "pgTitle": "",
+    "numDataRows": 20,
+    "secondTitle": "",
+    "numHeaderRows": 1,
+    "caption": "School Information",
+    "data": [
+        [
+            "1001",
+            "Leeds University",
+            "Leeds, UK",
+            "20000",
+            "1904",
+            "University",
+            "Dr. James Brown",
+            "https://leeds.ac.uk"
+        ],
+        [
+            "1002",
+            "Cambridge University",
+            "Cambridge, UK",
+            "25000",
+            "1209",
+            "University",
+            "Prof. Sarah Connor",
+            "https://cambridge.ac.uk"
+        ],
+        [
+            "1003",
+            "Oxford University",
+            "Oxford, UK",
+            "24000",
+            "1096",
+            "University",
+            "Dr. Michael Green",
+            "https://oxford.ac.uk"
+        ],
+        [
+            "1004",
+            "Imperial College London",
+            "London, UK",
+            "18000",
+            "1907",
+            "University",
+            "Prof. Emily White",
+            "https://imperial.ac.uk"
+        ],
+        [
+            "1005",
+            "University of Manchester",
+            "Manchester, UK",
+            "40000",
+            "1824",
+            "University",
+            "Dr. Robert Johnson",
+            "https://manchester.ac.uk"
+        ],
+        [
+            "1006",
+            "University of Edinburgh",
+            "Edinburgh, UK",
+            "35000",
+            "1583",
+            "University",
+            "Prof. Susan Lee",
+            "https://edinburgh.ac.uk"
+        ],
+        [
+            "1007",
+            "University of Bristol",
+            "Bristol, UK",
+            "22000",
+            "1876",
+            "University",
+            "Dr. David Kim",
+            "https://bristol.ac.uk"
+        ],
+        [
+            "1008",
+            "University of Sheffield",
+            "Sheffield, UK",
+            "27000",
+            "1905",
+            "University",
+            "Prof. Laura Brown",
+            "https://sheffield.ac.uk"
+        ],
+        [
+            "1009",
+            "University of Nottingham",
+            "Nottingham, UK",
+            "32000",
+            "1881",
+            "University",
+            "Dr. Michael White",
+            "https://nottingham.ac.uk"
+        ],
+        [
+            "1010",
+            "University of Southampton",
+            "Southampton, UK",
+            "25000",
+            "1862",
+            "University",
+            "Prof. Emily Kim",
+            "https://southampton.ac.uk"
+        ],
+        [
+            "1011",
+            "University of Leicester",
+            "Leicester, UK",
+            "20000",
+            "1921",
+            "University",
+            "Dr. Robert Lee",
+            "https://leicester.ac.uk"
+        ],
+        [
+            "1012",
+            "University of Liverpool",
+            "Liverpool, UK",
+            "24000",
+            "1881",
+            "University",
+            "Prof. Susan Brown",
+            "https://liverpool.ac.uk"
+        ],
+        [
+            "1013",
+            "University of Birmingham",
+            "Birmingham, UK",
+            "35000",
+            "1902",
+            "University",
+            "Dr. David Kim",
+            "https://birmingham.ac.uk"
+        ],
+        [
+            "1014",
+            "University of Warwick",
+            "Coventry, UK",
+            "27000",
+            "1965",
+            "University",
+            "Prof. Laura White",
+            "https://warwick.ac.uk"
+        ],
+        [
+            "1015",
+            "University of Newcastle",
+            "Newcastle, UK",
+            "24000",
+            "1834",
+            "University",
+            "Dr. Michael Brown",
+            "https://newcastle.ac.uk"
+        ],
+        [
+            "1016",
+            "University of Glasgow",
+            "Glasgow, UK",
+            "32000",
+            "1451",
+            "University",
+            "Prof. Emily Kim",
+            "https://glasgow.ac.uk"
+        ],
+        [
+            "1017",
+            "University of Cardiff",
+            "Cardiff, UK",
+            "25000",
+            "1883",
+            "University",
+            "Dr. Robert Lee",
+            "https://cardiff.ac.uk"
+        ],
+        [
+            "1018",
+            "University of Exeter",
+            "Exeter, UK",
+            "20000",
+            "1955",
+            "University",
+            "Prof. Susan Brown",
+            "https://exeter.ac.uk"
+        ],
+        [
+            "1019",
+            "University of York",
+            "York, UK",
+            "18000",
+            "1963",
+            "University",
+            "Dr. David Kim",
+            "https://york.ac.uk"
+        ],
+        [
+            "1020",
+            "University of Kent",
+            "Canterbury, UK",
+            "22000",
+            "1965",
+            "University",
+            "Prof. Laura White",
+            "https://kent.ac.uk"
+        ]
+    ]
+}
