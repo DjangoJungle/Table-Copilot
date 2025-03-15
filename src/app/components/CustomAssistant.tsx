@@ -1,13 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ProgrammingGrade, GradeTotal, AssistantResponse } from '../types';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { AssistantResponse } from '../types';
+import TablePreview from './TablePreview';
+import TableEditor from './TableEditor';
+import tableDataService from '../services/tableDataService';
 
 interface Message {
   content: string | any[];
   type: 'user' | 'assistant';
   timestamp: Date;
-  messageType?: 'text' | 'table' | 'thought';
+  messageType?: 'text' | 'table' | 'thought' | 'candidate_tables';
   isTyping?: boolean;
   tableName?: string;
+  candidateTables?: string[];
 }
 
 interface ThoughtStep {
@@ -17,12 +23,9 @@ interface ThoughtStep {
 }
 
 interface CustomAssistantProps {
-  onAction: (actionName: string, params?: any) => Promise<AssistantResponse>;
-  presetData: {
-    programmingGrade: ProgrammingGrade[];
-    gradeTotal: GradeTotal[];
-  };
   onLoadTable: (tableName: string, data: any[]) => void;
+  currentTableName?: string | null;
+  currentTableData?: any[] | null;
 }
 
 const ThinkingAnimation = () => (
@@ -33,13 +36,21 @@ const ThinkingAnimation = () => (
   </div>
 );
 
-const TypewriterText: React.FC<{ text: string; onComplete: () => void }> = ({ text, onComplete }) => {
+const TypewriterText: React.FC<{ text: string; onComplete: () => void; stopTyping: boolean }> = ({ text, onComplete, stopTyping }) => {
   const [displayText, setDisplayText] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
+    if (stopTyping) {
+      // 如果停止打字，直接显示全部文本
+      setDisplayText(text);
+      setCurrentIndex(text.length);
+      onComplete();
+      return;
+    }
+
     if (currentIndex < text.length) {
-      const delay = Math.random() * 30 + 20; // 20-50ms 随机延迟
+      const delay = Math.random() * 10 + 5; // 5-15ms 随机延迟，比原来更快
       const timer = setTimeout(() => {
         setDisplayText(text.slice(0, currentIndex + 1));
         setCurrentIndex(currentIndex + 1);
@@ -48,9 +59,15 @@ const TypewriterText: React.FC<{ text: string; onComplete: () => void }> = ({ te
     } else {
       onComplete();
     }
-  }, [currentIndex, text]);
+  }, [currentIndex, text, stopTyping]);
 
-  return <div className="whitespace-pre-wrap">{displayText}</div>;
+  return (
+    <div className="whitespace-pre-wrap markdown-content">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+        {displayText}
+      </ReactMarkdown>
+    </div>
+  );
 };
 
 const ThoughtProcess: React.FC<{ steps: ThoughtStep[] }> = ({ steps }) => {
@@ -73,12 +90,38 @@ const ThoughtProcess: React.FC<{ steps: ThoughtStep[] }> = ({ steps }) => {
   );
 };
 
-export const CustomAssistant: React.FC<CustomAssistantProps> = ({ onAction, presetData, onLoadTable }) => {
+const CandidateTables: React.FC<{ 
+  tables: string[]; 
+  onSelectTable: (tableName: string) => void 
+}> = ({ tables, onSelectTable }) => {
+  return (
+    <div className="border-l-2 border-green-400 pl-4 my-2">
+      <h4 className="text-sm font-semibold text-green-700 mb-2">可用表格</h4>
+      <div className="flex flex-wrap gap-2">
+        {tables.map((tableName) => (
+          <button
+            key={tableName}
+            onClick={() => onSelectTable(tableName)}
+            className="px-3 py-1 bg-green-50 hover:bg-green-100 text-green-800 rounded-full text-sm transition-colors"
+          >
+            {tableName}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export const CustomAssistant: React.FC<CustomAssistantProps> = ({ 
+  onLoadTable, 
+  currentTableName, 
+  currentTableData 
+}) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
   const [messages, setMessages] = useState<Message[]>([
     {
-      content: "Hello! I'm the Table Assistant, ready to help you query and analyze table data. What can I help you with?",
+      content: "你好！我是表格助手，可以帮助你查询和分析表格数据。有什么我可以帮你的吗？",
       type: 'assistant',
       timestamp: new Date(),
       messageType: 'text'
@@ -86,7 +129,50 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({ onAction, pres
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isThinking, setIsThinking] = useState(false);
+  const [isProcessingQuery, setIsProcessingQuery] = useState(false);
+  const [stopTyping, setStopTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const resizeRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // 表格预览状态
+  const [previewTableName, setPreviewTableName] = useState<string>('');
+  const [previewTableData, setPreviewTableData] = useState<any[] | null>(null);
+  const [showTablePreview, setShowTablePreview] = useState<boolean>(false);
+  
+  // 表格编辑状态
+  const [editTableName, setEditTableName] = useState<string>('');
+  const [editTableData, setEditTableData] = useState<any[] | null>(null);
+  const [showTableEditor, setShowTableEditor] = useState<boolean>(false);
+  
+  // 表格管理状态
+  const [availableTables, setAvailableTables] = useState<string[]>([]);
+  const [showTableManager, setShowTableManager] = useState<boolean>(false);
+  
+  // 窗口大小状态
+  const [dimensions, setDimensions] = useState({
+    width: 384, // 默认宽度 (w-96 = 24rem = 384px)
+    height: 500, // 默认高度
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStartPosition, setResizeStartPosition] = useState({ x: 0, y: 0 });
+  const [initialDimensions, setInitialDimensions] = useState({ width: 384, height: 500 });
+
+  // 当工作区表格变化时，通知助手
+  useEffect(() => {
+    if (currentTableName && currentTableData && currentTableData.length > 0) {
+      // 添加工作区更新消息
+      setMessages(prev => [
+        ...prev,
+        {
+          content: `工作区已更新，当前加载的表格是: ${currentTableName}，包含 ${currentTableData.length} 行数据。`,
+          type: 'assistant',
+          timestamp: new Date(),
+          messageType: 'text'
+        }
+      ]);
+    }
+  }, [currentTableName, currentTableData]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,457 +182,894 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({ onAction, pres
     scrollToBottom();
   }, [messages, isThinking]);
 
+  // 处理窗口大小调整
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      // 计算鼠标移动的距离
+      const deltaX = resizeStartPosition.x - e.clientX;
+      const deltaY = resizeStartPosition.y - e.clientY;
+      
+      // 计算新的尺寸
+      const newWidth = Math.max(300, initialDimensions.width + deltaX);
+      const newHeight = Math.max(300, initialDimensions.height + deltaY);
+      
+      if (containerRef.current) {
+        // 添加调整大小时的视觉反馈
+        containerRef.current.style.boxShadow = '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)';
+      }
+      
+      setDimensions({
+        width: newWidth,
+        height: newHeight
+      });
+    };
+    
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+      
+      if (containerRef.current) {
+        // 恢复正常阴影
+        containerRef.current.style.boxShadow = '';
+      }
+    };
+    
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, resizeStartPosition, initialDimensions]);
+
+  const handleResizeStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    setResizeStartPosition({ x: e.clientX, y: e.clientY });
+    setInitialDimensions({ ...dimensions });
+    document.body.style.cursor = 'nwse-resize';
+    document.body.style.userSelect = 'none';
+  };
+
   const handleClose = () => {
+    // 添加淡出动画
+    if (containerRef.current) {
+      containerRef.current.classList.add('animate-fadeOut');
+      containerRef.current.classList.remove('animate-fadeIn');
+      
+      setTimeout(() => {
+        setIsVisible(false);
+      }, 300);
+    } else {
     setIsVisible(false);
-    setTimeout(() => setIsOpen(false), 300);
+    }
   };
 
   const handleOpen = () => {
-    setIsOpen(true);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
         setIsVisible(true);
-      });
-    });
+    // 淡入动画会通过CSS处理
+  };
+
+  const handleToggle = () => {
+    if (isOpen) {
+      // 关闭时的动画
+      if (containerRef.current) {
+        containerRef.current.style.height = '56px';
+      }
+    } else {
+      // 打开时的动画
+      if (containerRef.current) {
+        containerRef.current.style.height = `${dimensions.height}px`;
+      }
+    }
+    setIsOpen(!isOpen);
   };
 
   const addMessageWithTypingEffect = (message: Message) => {
-    const messageWithTyping = { ...message, isTyping: true };
-    setMessages(prev => [...prev, messageWithTyping]);
+    setMessages(prev => [...prev, { ...message, isTyping: true }]);
+    setStopTyping(false); // 重置截停状态
   };
 
   const completeTyping = (index: number) => {
-    setMessages(prev => prev.map((msg, i) => 
-      i === index ? { ...msg, isTyping: false } : msg
-    ));
+    setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, isTyping: false } : msg));
   };
 
-  const simulateThinking = async () => {
+  const handleStopTyping = () => {
+    setStopTyping(true);
+  };
+
+  const parseThoughts = (thoughtsText: string): ThoughtStep[] => {
+    // 简单解析思考过程文本为结构化步骤
+    const steps: ThoughtStep[] = [];
+    const lines = thoughtsText.split('\n');
+    
+    let currentStep: ThoughtStep | null = null;
+    
+    for (const line of lines) {
+      if (line.startsWith('步骤:')) {
+        if (currentStep) {
+          steps.push(currentStep);
+        }
+        currentStep = {
+          title: line.replace('步骤:', '').trim(),
+          description: ''
+        };
+      } else if (line.startsWith('参数:') && currentStep) {
+        currentStep.description = line.replace('参数:', '').trim();
+      } else if (line.startsWith('结果:') && currentStep) {
+        try {
+          const resultJson = line.replace('结果:', '').trim();
+          currentStep.data = JSON.parse(resultJson);
+        } catch (e) {
+          currentStep.data = line.replace('结果:', '').trim();
+        }
+      }
+    }
+    
+    if (currentStep) {
+      steps.push(currentStep);
+    }
+    
+    return steps;
+  };
+
+  const handleSelectTable = async (tableName: string) => {
+    try {
+      // 先预览表格
+      const tableData = tableDataService.getTableData(tableName);
+      
+      if (!tableData || !Array.isArray(tableData)) {
+        throw new Error(`表格 ${tableName} 不存在或格式无效`);
+      }
+      
+      setPreviewTableName(tableName);
+      setPreviewTableData(tableData);
+      setShowTablePreview(true);
+      
+    } catch (error) {
+      console.error('选择表格出错:', error);
+      
+      setTimeout(() => {
+        const errorMessage: Message = {
+          content: `抱歉，选择表格时出现错误: ${error instanceof Error ? error.message : String(error)}`,
+      type: 'assistant',
+      timestamp: new Date(),
+          messageType: 'text'
+        };
+        
+        addMessageWithTypingEffect(errorMessage);
+      }, 500);
+    }
+  };
+  
+  const handleLoadTableFromPreview = () => {
+    if (previewTableData && previewTableName) {
+      // 加载表格到工作区
+      onLoadTable(previewTableName, previewTableData);
+      
+      // 添加选择表格的消息
+      setMessages(prev => [
+        ...prev,
+        {
+          content: `我已选择表格: ${previewTableName}`,
+          type: 'user',
+          timestamp: new Date(),
+          messageType: 'text'
+        }
+      ]);
+      
+      // 关闭预览
+      setShowTablePreview(false);
+      
+      // 使用选中的表格继续查询
+      handleTableAnalysis(previewTableName, previewTableData);
+    }
+  };
+  
+  const handleTableAnalysis = async (tableName: string, tableData: any[]) => {
     setIsThinking(true);
-    await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500)); // 500-1500ms 思考时间
-    setIsThinking(false);
-  };
-
-  const generateThoughtProcess = async (query: string) => {
-    // NL解码步骤
-    const nlProcessingSteps: ThoughtStep[] = [
-      {
-        title: "Natural Language Processing",
-        description: "Analyzing query intent and extracting key entities...",
-        data: {
-          query,
-          tokens: query.toLowerCase().split(/\s+/),
-          entities: {
-            subject: "students",
-            attribute: "programming abilities",
-            action: "find joinable tables"
-          }
-        }
-      },
-      {
-        title: "Query Classification",
-        description: "Determining query type and required information...",
-        data: {
-          queryType: "TABLE_DISCOVERY",
-          confidence: 0.92,
-          requiredInfo: ["student data", "programming skills", "joinable tables"]
-        }
-      }
-    ];
     
-    // 添加思考过程消息
-    setMessages(prev => [...prev, {
-      content: nlProcessingSteps,
+    try {
+      // 调用API处理查询
+      const userQuery = `请分析${tableName}表格的数据结构和内容`;
+      
+      const chatResponse = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          query: userQuery,
+          workspaceTable: {
+            tableName,
+            data: tableData
+          },
+          allTables: tableDataService.getAllTables() // 添加所有表格数据
+        })
+      });
+      
+      if (!chatResponse.ok) {
+        throw new Error(`API请求失败: ${chatResponse.status}`);
+      }
+      
+      const chatData = await chatResponse.json();
+      
+      if (!chatData.success) {
+        throw new Error(chatData.error || '处理查询时出错');
+      }
+      
+      // 添加助手回复
+      setTimeout(() => {
+        const assistantMessage: Message = {
+          content: chatData.result,
       type: 'assistant',
       timestamp: new Date(),
-      messageType: 'thought'
-    }]);
-    
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // 表格元数据解码步骤
-    const metadataSteps: ThoughtStep[] = [
-      {
-        title: "Table Metadata Analysis",
-        description: "Scanning available tables and their schemas...",
-        data: {
-          availableTables: [
-            { name: "stu_info", columns: ["Id", "Name", "Major", "MathsGrade", "Status", "Year"] },
-            { name: "programming_grade", columns: ["Id", "Name", "Grade", "Level"] },
-            { name: "grade_total", columns: ["Id", "Name", "Major", "Maths", "CSharp", "AvgGrade", "Rank"] }
-          ]
-        }
-      },
-      {
-        title: "Join Key Identification",
-        description: "Identifying potential join keys between tables...",
-        data: {
-          joinKeys: [
-            { tables: ["stu_info", "programming_grade"], key: "Id" },
-            { tables: ["stu_info", "grade_total"], key: "Id" },
-            { tables: ["programming_grade", "grade_total"], key: "Id" }
-          ]
-        }
-      }
-    ];
-    
-    // 添加元数据解码消息
-    setMessages(prev => [...prev, {
-      content: metadataSteps,
+          messageType: 'text'
+        };
+        
+        addMessageWithTypingEffect(assistantMessage);
+        setIsThinking(false);
+      }, 500);
+      
+    } catch (error) {
+      console.error('分析表格出错:', error);
+      
+      setTimeout(() => {
+        const errorMessage: Message = {
+          content: `抱歉，分析表格时出现错误: ${error instanceof Error ? error.message : String(error)}`,
       type: 'assistant',
       timestamp: new Date(),
-      messageType: 'thought'
-    }]);
-    
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // 相似度匹配步骤
-    const similaritySteps: ThoughtStep[] = [
-      {
-        title: "Semantic Matching",
-        description: "Calculating semantic similarity between query and table attributes...",
-        data: {
-          matches: [
-            { table: "programming_grade", attribute: "Grade", similarity: 0.87 },
-            { table: "programming_grade", attribute: "Level", similarity: 0.82 },
-            { table: "grade_total", attribute: "CSharp", similarity: 0.91 },
-            { table: "stu_info", attribute: "Major", similarity: 0.65 }
-          ]
-        }
-      },
-      {
-        title: "Relevance Ranking",
-        description: "Ranking tables by relevance to query...",
-        data: {
-          rankings: [
-            { table: "programming_grade", score: 0.89, reason: "Contains programming grade information" },
-            { table: "grade_total", score: 0.85, reason: "Contains C# programming scores" },
-            { table: "stu_info", score: 0.72, reason: "Contains basic student information" }
-          ]
-        }
-      }
-    ];
-    
-    // 添加相似度匹配消息
-    setMessages(prev => [...prev, {
-      content: similaritySteps,
-      type: 'assistant',
-      timestamp: new Date(),
-      messageType: 'thought'
-    }]);
-    
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    // 候选表格发现步骤
-    const candidateSteps: ThoughtStep[] = [
-      {
-        title: "Candidate Table Selection",
-        description: "Selecting most relevant tables based on query intent...",
-        data: {
-          selectedTables: ["programming_grade", "grade_total"],
-          confidence: 0.93
-        }
-      },
-      {
-        title: "Result Preparation",
-        description: "Preparing tables for presentation...",
-        data: {
-          action: "Display tables with load option",
-          tables: ["programming_grade", "grade_total"],
-          joinability: "Can be joined on Id field"
-        }
-      }
-    ];
-    
-    // 添加候选表格发现消息
-    setMessages(prev => [...prev, {
-      content: candidateSteps,
-      type: 'assistant',
-      timestamp: new Date(),
-      messageType: 'thought'
-    }]);
+          messageType: 'text'
+        };
+        
+        addMessageWithTypingEffect(errorMessage);
+        setIsThinking(false);
+      }, 500);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    
+    if (!inputValue.trim() || isProcessingQuery) return;
 
-    // 添加用户消息
     const userMessage: Message = {
       content: inputValue,
       type: 'user',
       timestamp: new Date(),
       messageType: 'text'
     };
+    
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
-
-    await simulateThinking();
-
-    // 处理特定查询
-    if (inputValue.toLowerCase().includes('programming abilities') || 
-        inputValue.toLowerCase().includes('joinable tables')) {
-      // 添加系统响应
-      addMessageWithTypingEffect({
-        content: "I'll find relevant tables for you. Let me think through this step by step...",
-        type: 'assistant',
-        timestamp: new Date(),
-        messageType: 'text'
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 生成思考过程
-      await generateThoughtProcess(inputValue);
-      
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // 添加结论
-      addMessageWithTypingEffect({
-        content: "I found two relevant tables that might help you:",
-        type: 'assistant',
-        timestamp: new Date(),
-        messageType: 'text'
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      await simulateThinking();
-
-      // 显示编程成绩表
-      const programmingResponse = await onAction('showProgrammingGrade');
-      addMessageWithTypingEffect({
-        content: "programming_grade table:",
-        type: 'assistant',
-        timestamp: new Date(),
-        messageType: 'text'
+    setIsThinking(true);
+    setIsProcessingQuery(true);
+    
+    try {
+      // 调用API处理查询
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          query: inputValue,
+          workspaceTable: currentTableName && currentTableData ? {
+            tableName: currentTableName,
+            data: currentTableData
+          } : undefined,
+          allTables: tableDataService.getAllTables() // 添加所有表格数据
+        })
       });
       
-      if (programmingResponse.type === 'table') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setMessages(prev => [...prev, {
-          content: programmingResponse.content,
+      if (!response.ok) {
+        throw new Error(`API请求失败: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || '处理查询时出错');
+      }
+      
+      // 处理思考过程
+      if (data.thoughts) {
+        const thoughtSteps = parseThoughts(data.thoughts);
+        
+        const thoughtMessage: Message = {
+          content: thoughtSteps,
+        type: 'assistant',
+        timestamp: new Date(),
+          messageType: 'thought'
+        };
+        
+        setMessages(prev => [...prev, thoughtMessage]);
+      }
+      
+      // 处理候选表格
+      if (data.candidateTables && data.candidateTables.length > 0) {
+        const candidateTablesMessage: Message = {
+          content: '以下是可用的表格，点击可选择加载到工作区:',
           type: 'assistant',
           timestamp: new Date(),
-          messageType: 'table',
-          tableName: programmingResponse.tableName
-        }]);
+          messageType: 'candidate_tables',
+          candidateTables: data.candidateTables
+        };
+        
+        setMessages(prev => [...prev, candidateTablesMessage]);
       }
-
-      await simulateThinking();
-
-      // 显示总成绩表
-      const totalResponse = await onAction('showGradeTotal');
-      addMessageWithTypingEffect({
-        content: "grade_total table:",
+      
+      // 处理表格数据
+      if (data.tableData && data.tableName) {
+        // 加载表格到工作区
+        onLoadTable(data.tableName, data.tableData);
+      }
+      
+      // 添加助手回复
+      setTimeout(() => {
+        const assistantMessage: Message = {
+          content: data.result,
         type: 'assistant',
         timestamp: new Date(),
         messageType: 'text'
-      });
+        };
+        
+        addMessageWithTypingEffect(assistantMessage);
+        setIsThinking(false);
+      }, 500);
       
-      if (totalResponse.type === 'table') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setMessages(prev => [...prev, {
-          content: totalResponse.content,
+    } catch (error) {
+      console.error('处理查询出错:', error);
+      
+      setTimeout(() => {
+        const errorMessage: Message = {
+          content: `抱歉，处理您的查询时出现错误: ${error instanceof Error ? error.message : String(error)}`,
           type: 'assistant',
           timestamp: new Date(),
-          messageType: 'table',
-          tableName: totalResponse.tableName
-        }]);
-      }
-    } else if (inputValue.toLowerCase().includes('student') || 
-               inputValue.toLowerCase().includes('information')) {
-      // 添加系统响应
-      addMessageWithTypingEffect({
-        content: "I found student information table that might help you:",
-        type: 'assistant',
-        timestamp: new Date(),
-        messageType: 'text'
-      });
-
-      await simulateThinking();
-
-      // 显示学生信息表
-      const studentResponse = await onAction('showStudentInfo');
-      
-      if (studentResponse.type === 'table') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setMessages(prev => [...prev, {
-          content: studentResponse.content,
-          type: 'assistant',
-          timestamp: new Date(),
-          messageType: 'table',
-          tableName: studentResponse.tableName
-        }]);
-      }
-    } else {
-      // 默认响应
-      addMessageWithTypingEffect({
-        content: "Sorry, I don't understand your request. You can try asking about students' programming abilities or joinable tables.",
-        type: 'assistant',
-        timestamp: new Date(),
-        messageType: 'text'
-      });
+          messageType: 'text'
+        };
+        
+        addMessageWithTypingEffect(errorMessage);
+        setIsThinking(false);
+      }, 500);
+    } finally {
+      setIsProcessingQuery(false);
     }
   };
 
-  const handleLoadTable = (data: any[], tableName?: string) => {
-    if (!tableName) return;
-    onLoadTable(tableName, data);
+  const clearConversation = async () => {
+    try {
+      await fetch('/api/chat', {
+        method: 'DELETE'
+      });
+      
+      setMessages([
+        {
+          content: "对话已重置。我是表格助手，可以帮助你查询和分析表格数据。有什么我可以帮你的吗？",
+          type: 'assistant',
+          timestamp: new Date(),
+          messageType: 'text'
+        }
+      ]);
+    } catch (error) {
+      console.error('清除对话历史出错:', error);
+    }
   };
 
-  const renderTableData = (data: any[], tableName?: string) => {
-    if (!data || data.length === 0) return null;
+  // 清空工作区
+  const clearWorkspace = () => {
+    onLoadTable('', []);
     
-    const headers = Object.keys(data[0]);
+    // 添加消息
+    const message: Message = {
+      content: '工作区已清空。',
+      type: 'assistant',
+      timestamp: new Date(),
+      messageType: 'text'
+    };
+    
+    addMessageWithTypingEffect(message);
+  };
+
+  const renderMarkdownContent = (content: string) => {
+    // 预处理内容，将表格包裹在div中以支持水平滚动
+    const processedContent = content.replace(
+      /(\|[^\n]*\|\n\|[-:| ]*\|.*?(?=\n\n|\n[^|]|$))/g,
+      '<div class="table-container">$1</div>'
+    );
     
     return (
-      <div className="relative">
-        <div className="absolute top-0 right-0 p-2">
-          <button
-            onClick={() => handleLoadTable(data, tableName)}
-            className="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700 transition-colors"
-          >
-            Load to Workspace
-          </button>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          table: ({ node, ...props }: any) => (
+            <div className="table-container">
+              <table {...props} />
+            </div>
+          ),
+          pre: ({ node, ...props }: any) => (
+            <pre className="overflow-x-auto" {...props} />
+          ),
+          code: ({ node, inline, ...props }: any) => (
+            inline ? 
+            <code {...props} /> : 
+            <div className="overflow-x-auto">
+              <code {...props} />
+            </div>
+          )
+        }}
+      >
+        {processedContent}
+      </ReactMarkdown>
+    );
+  };
+
+  const renderMessage = (message: Message, index: number) => {
+    const isLastMessage = index === messages.length - 1;
+    
+    if (message.type === 'user') {
+      return (
+        <div className="flex justify-end mb-4 message-animation">
+          <div className="bg-blue-500 text-white rounded-lg py-2 px-4 max-w-[80%] overflow-auto">
+            <p className="whitespace-pre-wrap">{message.content as string}</p>
+          </div>
         </div>
-        <table className="min-w-full bg-white rounded-lg overflow-hidden border border-gray-200 mt-6">
-          <thead className="bg-gray-50">
-            <tr>
-              {headers.map((header) => (
-                <th key={header} className="px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, index) => (
-              <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                {headers.map((header) => (
-                  <td key={header} className="px-3 py-2 text-sm text-gray-900">
-                    {row[header]}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      );
+    }
+    
+    if (message.messageType === 'thought') {
+      return (
+        <div className="flex mb-4 message-animation">
+          <div className="bg-gray-100 rounded-lg py-3 px-4 max-w-[90%] overflow-auto">
+            <div className="mb-2">
+              <span className="text-xs text-gray-500">思考过程</span>
+            </div>
+            <ThoughtProcess steps={message.content as ThoughtStep[]} />
+          </div>
+        </div>
+      );
+    }
+
+    if (message.messageType === 'candidate_tables' && message.candidateTables) {
+      return (
+        <div className="flex mb-4 message-animation">
+          <div className="bg-gray-100 rounded-lg py-3 px-4 max-w-[90%] overflow-auto">
+            <div className="mb-2">
+              <span className="text-xs text-gray-500">{message.content as string}</span>
+            </div>
+            <CandidateTables 
+              tables={message.candidateTables} 
+              onSelectTable={handleSelectTable} 
+            />
+          </div>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="flex mb-4 message-animation">
+        <div className="bg-white rounded-lg py-2 px-4 shadow-sm max-w-[80%] overflow-auto markdown-content">
+          {message.isTyping ? (
+            <>
+              <TypewriterText 
+                text={message.content as string} 
+                onComplete={() => completeTyping(index)}
+                stopTyping={stopTyping}
+              />
+              {isLastMessage && message.isTyping && (
+          <button
+                  onClick={handleStopTyping}
+                  className="text-xs text-blue-500 hover:text-blue-700 mt-2 stop-button px-2 py-1 rounded-full bg-blue-50"
+          >
+                  停止生成
+          </button>
+              )}
+            </>
+          ) : (
+            <div className="markdown-content">
+              {renderMarkdownContent(message.content as string)}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
 
-  if (!isOpen) {
+  // 加载可用表格列表
+  const loadAvailableTables = () => {
+    const tables = tableDataService.getAllTableNames();
+    setAvailableTables(tables);
+  };
+
+  // 初始化时加载表格列表
+  useEffect(() => {
+    loadAvailableTables();
+  }, []);
+
+  // 打开表格管理器
+  const openTableManager = () => {
+    loadAvailableTables();
+    setShowTableManager(true);
+  };
+
+  // 编辑表格
+  const handleEditTable = (tableName: string) => {
+    try {
+      const tableData = tableDataService.getTableData(tableName);
+      
+      if (!tableData || !Array.isArray(tableData)) {
+        throw new Error(`表格 ${tableName} 不存在或格式无效`);
+      }
+      
+      setEditTableName(tableName);
+      setEditTableData(tableData);
+      setShowTableEditor(true);
+      setShowTableManager(false); // 关闭表格管理器
+    } catch (error) {
+      console.error('编辑表格出错:', error);
+      alert(`编辑表格出错: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // 保存编辑后的表格
+  const handleSaveEditedTable = (tableName: string, data: any[]) => {
+    try {
+      tableDataService.updateTableData(tableName, data);
+      setShowTableEditor(false);
+      
+      // 如果当前工作区是这个表格，更新工作区
+      if (currentTableName === tableName) {
+        onLoadTable(tableName, data);
+      }
+      
+      // 添加消息
+      const message: Message = {
+        content: `表格 ${tableName} 已更新。`,
+        type: 'assistant',
+        timestamp: new Date(),
+        messageType: 'text'
+      };
+      
+      addMessageWithTypingEffect(message);
+      
+      // 刷新表格列表
+      loadAvailableTables();
+    } catch (error) {
+      console.error('保存表格出错:', error);
+      alert(`保存表格出错: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // 另存为新表格
+  const handleSaveAsNewTable = (originalName: string, newName: string, data: any[]) => {
+    try {
+      // 检查表格名称是否已存在
+      const existingTables = tableDataService.getAllTableNames();
+      if (existingTables.includes(newName)) {
+        throw new Error(`表格名称 ${newName} 已存在`);
+      }
+      
+      tableDataService.saveAsNewTable(originalName, newName, data);
+      setShowTableEditor(false);
+      
+      // 添加消息
+      const message: Message = {
+        content: `表格已另存为 ${newName}。`,
+        type: 'assistant',
+        timestamp: new Date(),
+        messageType: 'text'
+      };
+      
+      addMessageWithTypingEffect(message);
+      
+      // 刷新表格列表
+      loadAvailableTables();
+    } catch (error) {
+      console.error('另存为新表格出错:', error);
+      alert(`另存为新表格出错: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // 删除表格
+  const handleDeleteTable = (tableName: string) => {
+    if (window.confirm(`确定要删除表格 ${tableName} 吗？此操作不可撤销。`)) {
+      try {
+        tableDataService.deleteTable(tableName);
+        
+        // 如果当前工作区是这个表格，清空工作区
+        if (currentTableName === tableName) {
+          clearWorkspace();
+        }
+        
+        // 添加消息
+        const message: Message = {
+          content: `表格 ${tableName} 已删除。`,
+          type: 'assistant',
+          timestamp: new Date(),
+          messageType: 'text'
+        };
+        
+        addMessageWithTypingEffect(message);
+        
+        // 刷新表格列表
+        loadAvailableTables();
+      } catch (error) {
+        console.error('删除表格出错:', error);
+        alert(`删除表格出错: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  };
+
+  // 渲染表格管理器
+  const renderTableManager = () => {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">表格管理</h3>
+            <button
+              onClick={() => setShowTableManager(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="overflow-y-auto flex-1">
+            {availableTables.length > 0 ? (
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2 bg-gray-100 border">表格名称</th>
+                    <th className="px-4 py-2 bg-gray-100 border">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {availableTables.map((tableName) => (
+                    <tr key={tableName} className="border-t">
+                      <td className="px-4 py-2 border">{tableName}</td>
+                      <td className="px-4 py-2 border">
+                        <div className="flex space-x-2 justify-center">
+                          <button
+                            onClick={() => handleSelectTable(tableName)}
+                            className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
+                            title="预览表格"
+                          >
+                            预览
+                          </button>
+                          <button
+                            onClick={() => handleEditTable(tableName)}
+                            className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
+                            title="编辑表格"
+                          >
+                            编辑
+                          </button>
+                          <button
+                            onClick={() => handleDeleteTable(tableName)}
+                            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+                            title="删除表格"
+                          >
+                            删除
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-8">
+                <p>没有可用的表格</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={() => setShowTableManager(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (!isVisible) {
     return (
       <button
         onClick={handleOpen}
-        className="fixed bottom-4 right-4 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 hover:scale-110 transition-all duration-300 z-50 flex items-center space-x-2 group"
+        className="fixed bottom-4 right-4 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 assistant-button animate-fadeIn flex items-center justify-center"
+        style={{ width: '48px', height: '48px' }}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 transition-transform duration-300 ease-in-out" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
         </svg>
-        <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute right-full mr-2 bg-blue-700 px-2 py-1 rounded whitespace-nowrap">
-          Open Assistant
-        </span>
       </button>
     );
   }
 
   return (
-    <div 
-      className={`fixed bottom-4 right-4 w-[500px] bg-white rounded-lg shadow-xl flex flex-col overflow-hidden border border-gray-200 z-50 transition-all duration-300 origin-bottom-right ${
-        isVisible 
-          ? 'opacity-100 h-[600px] transform scale-100' 
-          : 'opacity-0 h-0 transform scale-95'
+    <div
+      ref={containerRef}
+      className={`fixed bottom-4 right-4 z-50 flex flex-col rounded-lg shadow-xl bg-white transition-all duration-300 ease-in-out ${
+        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
       }`}
+      style={{
+        width: `${dimensions.width}px`,
+        height: isOpen ? `${dimensions.height}px` : 'auto',
+        resize: 'both',
+        overflow: 'hidden',
+      }}
     >
       {/* 头部 */}
-      <div className="bg-blue-600 text-white p-4 flex justify-between items-center">
-        <h3 className="font-semibold flex items-center space-x-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      <div className="bg-blue-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center cursor-pointer" onClick={handleToggle}>
+        <div className="flex items-center ml-8">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
-          <span>Table Assistant</span>
-        </h3>
+          <h3 className="font-medium">表格助手</h3>
+        </div>
+        <div className="flex space-x-2">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              openTableManager();
+            }}
+            className="text-white hover:text-gray-200 transition-colors"
+            title="管理表格"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              clearConversation();
+            }}
+            className="text-white hover:text-gray-200 transition-colors"
+            title="清除对话历史"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+          </button>
         <button
-          onClick={handleClose}
-          className="text-white hover:text-gray-200 transition-colors p-1 hover:bg-blue-700 rounded group relative"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClose();
+            }}
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
-          <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute right-full mr-2 bg-blue-700 px-2 py-1 rounded whitespace-nowrap text-sm">
-            Minimize
-          </span>
         </button>
+        </div>
       </div>
 
-      {/* 消息列表 */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[90%] p-3 rounded-lg ${
-                message.type === 'user'
-                  ? 'bg-blue-600 text-white rounded-br-none'
-                  : 'bg-white text-gray-800 shadow-sm rounded-bl-none'
-              }`}
-            >
-              {message.messageType === 'table' ? (
-                renderTableData(message.content as any[], message.tableName)
-              ) : message.messageType === 'thought' ? (
-                <ThoughtProcess steps={message.content as ThoughtStep[]} />
-              ) : message.isTyping ? (
-                <TypewriterText 
-                  text={message.content as string} 
-                  onComplete={() => completeTyping(index)}
-                />
-              ) : (
-                <div className="whitespace-pre-wrap">{message.content as string}</div>
-              )}
-              <div
-                className={`text-xs mt-1 ${
-                  message.type === 'user' ? 'text-blue-100' : 'text-gray-400'
-                }`}
-              >
-                {message.timestamp.toLocaleTimeString()}
+      {isOpen && (
+        <>
+          {/* 工作区状态 */}
+          {currentTableName && (
+            <div className="bg-blue-50 px-4 py-2 border-b border-blue-100 flex justify-between items-center">
+              <div className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span className="text-xs text-blue-700">工作区: {currentTableName}</span>
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleEditTable(currentTableName)}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  编辑
+                </button>
+                <button
+                  onClick={clearWorkspace}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  清除
+                </button>
               </div>
             </div>
+          )}
+          
+          {/* 消息区域 */}
+          <div className="flex-1 p-4 overflow-y-auto custom-scrollbar" style={{ scrollbarWidth: 'thin' }}>
+            <div className="space-y-6">
+              {messages.map((message, index) => (
+                <div key={index}>
+                  {renderMessage(message, index)}
           </div>
         ))}
         {isThinking && (
-          <div className="flex justify-start">
+                <div className="flex mb-4">
             <ThinkingAnimation />
           </div>
         )}
+            </div>
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 输入框 */}
-      <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-gray-200">
-        <div className="flex space-x-2">
+          {/* 输入区域 */}
+          <div className="p-3 border-t border-gray-200">
+            <form onSubmit={handleSubmit} className="flex items-center space-x-2">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Enter your question..."
-            disabled={isThinking}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder="输入您的问题..."
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isProcessingQuery}
           />
           <button
             type="submit"
-            disabled={isThinking || !inputValue.trim()}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className={`p-2 rounded-full ${isProcessingQuery ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white transition-colors`}
+                disabled={isProcessingQuery}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </button>
+            </form>
+          </div>
+          
+          {/* 调整大小的手柄 */}
+          <div 
+            ref={resizeRef}
+            className="absolute top-0 left-0 w-8 h-8 cursor-nwse-resize resize-handle flex items-center justify-center z-10"
+            onMouseDown={handleResizeStart}
+            title="拖动调整大小"
           >
-            <span>Send</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            <svg 
+              width="14" 
+              height="14" 
+              viewBox="0 0 14 14" 
+              fill="currentColor" 
+              className="text-white hover:text-gray-200 transition-colors"
+            >
+              <path d="M1.5 12.5L12.5 1.5M1.5 8.5L8.5 1.5M1.5 4.5L4.5 1.5" strokeWidth="2" stroke="currentColor" strokeLinecap="round" />
             </svg>
-          </button>
         </div>
-      </form>
+        </>
+      )}
+      
+      {/* 表格预览弹窗 */}
+      {showTablePreview && previewTableData && (
+        <TablePreview
+          tableName={previewTableName}
+          data={previewTableData}
+          onClose={() => setShowTablePreview(false)}
+          onLoadToWorkspace={handleLoadTableFromPreview}
+        />
+      )}
+
+      {/* 表格编辑模态框 */}
+      {showTableEditor && editTableData && (
+        <TableEditor
+          tableName={editTableName}
+          data={editTableData}
+          onSave={handleSaveEditedTable}
+          onSaveAsNew={handleSaveAsNewTable}
+          onCancel={() => setShowTableEditor(false)}
+        />
+      )}
+
+      {/* 表格管理模态框 */}
+      {showTableManager && renderTableManager()}
     </div>
   );
 }; 

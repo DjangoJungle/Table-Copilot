@@ -16,32 +16,6 @@ export interface TableData {
   children?: TableData[];
 }
 
-export interface StudentInfo {
-  Id: number;
-  Name: string;
-  Major: string;
-  MathsGrade: number;
-  Status: string;
-  Year: number;
-}
-
-export interface ProgrammingGrade {
-  Id: number;
-  Name: string;
-  Grade: number;
-  Level: string;
-}
-
-export interface GradeTotal {
-  Id: number;
-  Name: string;
-  Major: string;
-  Maths: number;
-  CSharp: number;
-  AvgGrade: number;
-  Rank: number;
-}
-
 export interface AssistantResponse {
   type: 'text' | 'table';
   content: string | any[];

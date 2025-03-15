@@ -24,9 +24,13 @@
     "openai": "^4.76.0",
     "react": "^18",
     "react-dom": "^18",
+    "react-markdown": "^10.1.0",
     "react-spreadsheet": "^0.9.5",
+    "remark-gfm": "^4.0.1",
     "scheduler": "^0.23.2",
-    "spreadsheet-demo": "file:"
+    "spreadsheet-demo": "file:",
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.22.3"
   },
   "devDependencies": {
     "@types/node": "^22",

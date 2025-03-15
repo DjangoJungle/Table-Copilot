@@ -1,67 +1,26 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import { CustomAssistant } from "./components/CustomAssistant";
-import { StudentInfo, ProgrammingGrade, GradeTotal } from "./types";
-
-const initialStudentInfo: StudentInfo[] = [
-  { Id: 1, Name: "Lily", Major: "CS", MathsGrade: 78, Status: "graduate", Year: 2023 },
-  { Id: 2, Name: "Sam", Major: "SE", MathsGrade: 93, Status: "graduate", Year: 2024 },
-  { Id: 3, Name: "Adam", Major: "Math", MathsGrade: 95, Status: "undergraduate", Year: 2025 },
-];
-
-const programmingGradeData: ProgrammingGrade[] = [
-  { Id: 1, Name: "Lily", Grade: 91, Level: "A" },
-  { Id: 3, Name: "Adam", Grade: 63, Level: "C" },
-];
-
-const gradeTotalData: GradeTotal[] = [
-  { Id: 2, Name: "Sam", Major: "SE", Maths: 93, CSharp: 83, AvgGrade: 88, Rank: 10 },
-  { Id: 6, Name: "Lisa", Major: "CS", Maths: 88, CSharp: 92, AvgGrade: 90, Rank: 8 },
-];
-
-// Sample data for all tables
-const allTablesData = {
-  'stu_info': initialStudentInfo,
-  'programming_grade': programmingGradeData,
-  'grade_total': gradeTotalData,
-  // Add more tables as needed
-};
+import TableEditor from "./components/TableEditor";
+import tableDataService from "./services/tableDataService";
 
 const HomePage = () => {
   const [currentTableData, setCurrentTableData] = useState<any[] | null>(null);
   const [currentTableName, setCurrentTableName] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [statsData, setStatsData] = useState<any>(null);
+  const [availableTables, setAvailableTables] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // 表格编辑状态
+  const [showTableEditor, setShowTableEditor] = useState<boolean>(false);
 
-  const handleAction = async (actionName: string, params?: any) => {
-    switch (actionName) {
-      case 'showProgrammingGrade':
-        return {
-          type: 'table' as const,
-          content: programmingGradeData,
-          tableName: 'programming_grade'
-        };
-      case 'showGradeTotal':
-        return {
-          type: 'table' as const,
-          content: gradeTotalData,
-          tableName: 'grade_total'
-        };
-      case 'showStudentInfo':
-        return {
-          type: 'table' as const,
-          content: initialStudentInfo,
-          tableName: 'stu_info'
-        };
-      default:
-        return {
-          type: 'text' as const,
-          content: 'Sorry, I don\'t understand this command.',
-        };
-    }
-  };
+  // 初始化时加载表格列表
+  useEffect(() => {
+    const tableNames = tableDataService.getAllTableNames();
+    setAvailableTables(tableNames);
+  }, []);
 
   const loadTableToWorkspace = (tableName: string, data: any[]) => {
     setCurrentTableData(data);
@@ -97,29 +56,57 @@ const HomePage = () => {
     ));
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const parsedData = JSON.parse(content);
         if (Array.isArray(parsedData) && parsedData.length > 0) {
-          setCurrentTableData(parsedData);
-          setCurrentTableName(file.name.replace(/\.[^/.]+$/, ""));
-          setShowStats(false);
+          const tableName = file.name.replace(/\.[^/.]+$/, "");
+          
+          // 保存到数据服务
+          try {
+            const response = await fetch('/api/tables', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                tableName,
+                data: parsedData
+              })
+            });
+            
+            if (!response.ok) {
+              throw new Error(`保存表格失败: ${response.status}`);
+            }
+            
+            // 更新可用表格列表
+            const tableNames = tableDataService.getAllTableNames();
+            setAvailableTables(tableNames);
+            
+            // 加载到工作区
+            setCurrentTableData(parsedData);
+            setCurrentTableName(tableName);
+            setShowStats(false);
+          } catch (error) {
+            console.error('保存表格失败:', error);
+            alert(`保存表格失败: ${error instanceof Error ? error.message : String(error)}`);
+          }
         } else {
-          alert("Invalid data format. Please upload a valid JSON array.");
+          alert("无效的数据格式。请上传有效的JSON数组。");
         }
       } catch (error) {
-        alert("Error parsing file. Please ensure it's a valid JSON file.");
+        alert("解析文件出错。请确保它是有效的JSON文件。");
       }
     };
     reader.readAsText(file);
     
-    // Reset the input value to allow uploading the same file again
+    // 重置输入值以允许再次上传相同的文件
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -144,18 +131,24 @@ const HomePage = () => {
   const calculateStats = () => {
     if (!currentTableData || currentTableData.length === 0) return;
     
+    if (showStats) {
+      // 如果已经显示统计，则关闭
+      setShowStats(false);
+      return;
+    }
+    
     const stats: any = {};
     const numericColumns: string[] = [];
     const headers = Object.keys(currentTableData[0]);
     
-    // Identify numeric columns
+    // 识别数值列
     headers.forEach(header => {
       if (typeof currentTableData[0][header] === 'number') {
         numericColumns.push(header);
       }
     });
     
-    // Calculate statistics for numeric columns
+    // 计算数值列的统计信息
     numericColumns.forEach(column => {
       const values = currentTableData.map(row => row[column]);
       const sum = values.reduce((a, b) => a + b, 0);
@@ -171,39 +164,110 @@ const HomePage = () => {
       };
     });
     
-    // Count rows
+    // 计算行数
     stats.rowCount = currentTableData.length;
     
     setStatsData(stats);
     setShowStats(true);
   };
 
+  const handleLoadTable = (tableName: string) => {
+    const data = tableDataService.getTableData(tableName);
+    if (data) {
+      loadTableToWorkspace(tableName, data);
+    }
+  };
+
+  const handleClearWorkspace = () => {
+    setCurrentTableData(null);
+    setCurrentTableName(null);
+    setShowStats(false);
+  };
+
+  // 编辑当前表格
+  const handleEditCurrentTable = () => {
+    if (!currentTableName || !currentTableData) return;
+    setShowTableEditor(true);
+  };
+
+  // 保存编辑后的表格
+  const handleSaveEditedTable = (tableName: string, data: any[]) => {
+    try {
+      tableDataService.updateTableData(tableName, data);
+      setShowTableEditor(false);
+      
+      // 更新工作区
+      loadTableToWorkspace(tableName, data);
+      
+      // 刷新表格列表
+      const tableNames = tableDataService.getAllTableNames();
+      setAvailableTables(tableNames);
+    } catch (error) {
+      console.error('保存表格出错:', error);
+      alert(`保存表格出错: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // 另存为新表格
+  const handleSaveAsNewTable = (originalName: string, newName: string, data: any[]) => {
+    try {
+      // 检查表格名称是否已存在
+      const existingTables = tableDataService.getAllTableNames();
+      if (existingTables.includes(newName)) {
+        throw new Error(`表格名称 ${newName} 已存在`);
+      }
+      
+      tableDataService.saveAsNewTable(originalName, newName, data);
+      setShowTableEditor(false);
+      
+      // 更新工作区
+      loadTableToWorkspace(newName, data);
+      
+      // 刷新表格列表
+      const tableNames = tableDataService.getAllTableNames();
+      setAvailableTables(tableNames);
+      
+      // 只在浏览器环境中触发事件
+      if (typeof window !== 'undefined') {
+        // 触发localStorage事件，通知其他组件刷新
+        window.dispatchEvent(new Event('storage'));
+      }
+      
+      // 显示成功消息
+      alert(`表格已成功另存为 ${newName}`);
+    } catch (error) {
+      console.error('另存为新表格出错:', error);
+      alert(`另存为新表格出错: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  // 渲染统计信息
   const renderStats = () => {
     if (!statsData) return null;
     
     return (
       <div className="bg-white p-4 rounded-lg shadow-lg">
-        <h3 className="text-lg font-semibold mb-3">Table Statistics</h3>
-        <p className="mb-2">Row Count: {statsData.rowCount}</p>
+        <h3 className="text-lg font-semibold mb-3">表格统计</h3>
+        <p className="mb-2">行数: {statsData.rowCount}</p>
         
         {Object.keys(statsData).filter(key => key !== 'rowCount').map(column => (
           <div key={column} className="mb-4">
             <h4 className="font-medium text-blue-600">{column}</h4>
             <div className="grid grid-cols-4 gap-2 mt-1">
               <div className="bg-gray-50 p-2 rounded">
-                <span className="text-xs text-gray-500">Min</span>
+                <span className="text-xs text-gray-500">最小值</span>
                 <p>{statsData[column].min}</p>
               </div>
               <div className="bg-gray-50 p-2 rounded">
-                <span className="text-xs text-gray-500">Max</span>
+                <span className="text-xs text-gray-500">最大值</span>
                 <p>{statsData[column].max}</p>
               </div>
               <div className="bg-gray-50 p-2 rounded">
-                <span className="text-xs text-gray-500">Average</span>
+                <span className="text-xs text-gray-500">平均值</span>
                 <p>{statsData[column].avg}</p>
               </div>
               <div className="bg-gray-50 p-2 rounded">
-                <span className="text-xs text-gray-500">Sum</span>
+                <span className="text-xs text-gray-500">总和</span>
                 <p>{statsData[column].sum}</p>
               </div>
             </div>
@@ -219,6 +283,7 @@ const HomePage = () => {
         <Sidebar
           selectedSpreadsheetIndex={0}
           setSelectedSpreadsheetIndex={() => {}}
+          onLoadTable={loadTableToWorkspace}
         />
         <div className="flex-1 p-6">
           <div className="bg-white rounded-lg shadow-md mb-6">
@@ -227,7 +292,7 @@ const HomePage = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                 </svg>
-                <h2 className="text-xl font-semibold">Table Workspace</h2>
+                <h2 className="text-xl font-semibold">表格工作区</h2>
               </div>
               {currentTableName && (
                 <div className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
@@ -248,108 +313,116 @@ const HomePage = () => {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="flex items-center space-x-1 px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                  title="Upload a table (JSON format)"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
-                  <span>Upload</span>
+                  <span>上传表格</span>
                 </button>
                 
-                <button
-                  onClick={handleDownload}
-                  disabled={!currentTableData}
-                  className={`flex items-center space-x-1 px-3 py-2 border rounded-md transition-colors ${
-                    currentTableData 
-                      ? 'bg-white border-gray-300 hover:bg-gray-50' 
-                      : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                  title="Download current table as JSON"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  <span>Download</span>
-                </button>
-                
-                <button
-                  onClick={calculateStats}
-                  disabled={!currentTableData}
-                  className={`flex items-center space-x-1 px-3 py-2 border rounded-md transition-colors ${
-                    currentTableData 
-                      ? 'bg-white border-gray-300 hover:bg-gray-50' 
-                      : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                  title="Calculate statistics for numeric columns"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  <span>Statistics</span>
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setCurrentTableData(null);
-                    setCurrentTableName(null);
-                    setShowStats(false);
-                  }}
-                  disabled={!currentTableData}
-                  className={`flex items-center space-x-1 px-3 py-2 border rounded-md transition-colors ${
-                    currentTableData 
-                      ? 'bg-white border-gray-300 hover:bg-gray-50' 
-                      : 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                  }`}
-                  title="Clear workspace"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  <span>Clear</span>
-                </button>
+                {currentTableData && (
+                  <>
+                    <button
+                      onClick={handleEditCurrentTable}
+                      className="flex items-center space-x-1 px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>编辑</span>
+                    </button>
+                    
+                    <button
+                      onClick={handleDownload}
+                      className="flex items-center space-x-1 px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      <span>下载</span>
+                    </button>
+                    
+                    <button
+                      onClick={calculateStats}
+                      className="flex items-center space-x-1 px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      <span>{showStats ? '隐藏统计' : '显示统计'}</span>
+                    </button>
+
+                    <button
+                      onClick={handleClearWorkspace}
+                      className="flex items-center space-x-1 px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                      <span>清空</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
+            
+            <div className="p-4">
+              {showStats ? (
+                renderStats()
+              ) : currentTableData ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      {renderTableHeaders(currentTableData)}
+                    </thead>
+                    <tbody>
+                      {renderTableRows(currentTableData)}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-gray-900">没有表格数据</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    上传一个JSON文件或使用助手加载表格数据
+                  </p>
+                  <div className="mt-6">
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      上传表格
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          
-          {showStats && statsData ? (
-            <div className="mb-6">
-              {renderStats()}
-              <button
-                onClick={() => setShowStats(false)}
-                className="mt-4 px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
-              >
-                Hide Statistics
-              </button>
-            </div>
-          ) : currentTableData ? (
-            <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-lg">
-              <thead>
-                {renderTableHeaders(currentTableData)}
-              </thead>
-              <tbody>
-                {renderTableRows(currentTableData)}
-              </tbody>
-            </table>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[400px] bg-white rounded-lg shadow-md text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <p className="text-xl">Workspace is empty</p>
-              <p className="mt-2">Upload a table or ask the assistant to find tables for you</p>
-            </div>
-          )}
         </div>
       </div>
       
       <CustomAssistant
-        onAction={handleAction}
-        presetData={{
-          programmingGrade: programmingGradeData,
-          gradeTotal: gradeTotalData,
-        }}
         onLoadTable={loadTableToWorkspace}
+        currentTableName={currentTableName}
+        currentTableData={currentTableData}
       />
+      
+      {/* 表格编辑模态框 */}
+      {showTableEditor && currentTableData && currentTableName && (
+        <TableEditor
+          tableName={currentTableName}
+          data={currentTableData}
+          onSave={handleSaveEditedTable}
+          onSaveAsNew={handleSaveAsNewTable}
+          onCancel={() => setShowTableEditor(false)}
+        />
+      )}
     </div>
   );
 };
