@@ -75,6 +75,13 @@ const DeleteTableSchema = z.object({
   tableName: z.string().describe('要删除的表格名称')
 });
 
+// Python关键词分析工具Schema
+const KeywordAnalysisSchema = z.object({
+  tableName: z.string().describe('要分析的表格名称'),
+  column: z.string().describe('要分析的列名'),
+  algorithm: z.enum(['simple', 'advanced']).optional().describe('分析算法类型: simple(简单词频统计) 或 advanced(高级NLP分析)')
+});
+
 // 工具函数实现
 export const tableTools = {
   // 列出所有表格
@@ -542,6 +549,60 @@ export const tableTools = {
         error: `删除表格失败: ${error instanceof Error ? error.message : String(error)}` 
       };
     }
+  },
+
+  // Python关键词分析工具函数
+  keywordAnalysis: async (args: { tableName: string; column: string; algorithm?: 'simple' | 'advanced' }): Promise<any> => {
+    try {
+      const { tableName, column, algorithm = 'simple' } = args;
+      
+      // 获取表格数据
+      const tableData = tableDataService.getTableData(tableName);
+      
+      if (!tableData || !Array.isArray(tableData) || tableData.length === 0) {
+        throw new Error(`表格 ${tableName} 不存在或为空`);
+      }
+      
+      // 检查列是否存在
+      if (!(column in tableData[0])) {
+        throw new Error(`列 ${column} 在表格 ${tableName} 中不存在`);
+      }
+      
+      // 调用Python API
+      const response = await fetch('http://localhost:8000/api/keyword_stats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          table_name: tableName,
+          data: tableData,
+          column,
+          algorithm
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API请求失败: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || '分析失败');
+      }
+      
+      return {
+        tableName,
+        column,
+        method: result.method,
+        data: result.result
+      };
+    } catch (error) {
+      console.error('关键词分析出错:', error);
+      throw error;
+    }
   }
 };
 
@@ -637,5 +698,6 @@ export const tableToolsSchemas = {
   addTableRow: zodToJsonSchema(AddRowSchema),
   deleteTableRow: zodToJsonSchema(DeleteRowSchema),
   saveAsNewTable: zodToJsonSchema(SaveAsNewTableSchema),
-  deleteTable: zodToJsonSchema(DeleteTableSchema)
+  deleteTable: zodToJsonSchema(DeleteTableSchema),
+  keywordAnalysis: zodToJsonSchema(KeywordAnalysisSchema)
 }; 

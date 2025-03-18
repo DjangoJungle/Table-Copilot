@@ -1,0 +1,15 @@
+{
+  "table_name": "students",
+  "data": [
+    {"id": 1, "name": "张三", "description": "喜欢编程和数学，经常参加编程比赛"},
+    {"id": 2, "name": "李四", "description": "对数学和物理感兴趣，喜欢解决复杂问题"},
+    {"id": 3, "name": "王五", "description": "文学爱好者，喜欢写作和阅读"},
+    {"id": 4, "name": "赵六", "description": "体育特长生，擅长篮球和足球"},
+    {"id": 5, "name": "钱七", "description": "音乐爱好者，会弹钢琴和小提琴"},
+    {"id": 6, "name": "孙八", "description": "对编程和人工智能感兴趣，正在学习Python和机器学习"},
+    {"id": 7, "name": "周九", "description": "喜欢历史和地理，经常阅读相关书籍"},
+    {"id": 8, "name": "吴十", "description": "数学成绩优秀，曾获得数学竞赛一等奖"}
+  ],
+  "column": "description",
+  "algorithm": "simple"
+} 

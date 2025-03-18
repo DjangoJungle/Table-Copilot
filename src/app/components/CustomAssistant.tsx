@@ -23,9 +23,12 @@ interface ThoughtStep {
 }
 
 interface CustomAssistantProps {
-  onLoadTable: (tableName: string, data: any[]) => void;
+  onLoadTable?: (tableName: string, data: any[]) => void;
   currentTableName?: string | null;
   currentTableData?: any[] | null;
+  workspaceTables?: { name: string; data: any[] }[];
+  onClearWorkspace?: () => void;
+  allTables?: { name: string; data: any[] }[];
 }
 
 const ThinkingAnimation = () => (
@@ -115,7 +118,10 @@ const CandidateTables: React.FC<{
 export const CustomAssistant: React.FC<CustomAssistantProps> = ({ 
   onLoadTable, 
   currentTableName, 
-  currentTableData 
+  currentTableData,
+  workspaceTables = [],
+  onClearWorkspace,
+  allTables
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isVisible, setIsVisible] = useState(true);
@@ -130,6 +136,7 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [isThinking, setIsThinking] = useState(false);
   const [isProcessingQuery, setIsProcessingQuery] = useState(false);
+  const [isStopTypingVisible, setIsStopTypingVisible] = useState(false);
   const [stopTyping, setStopTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const resizeRef = useRef<HTMLDivElement>(null);
@@ -349,7 +356,7 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
   };
   
   const handleLoadTableFromPreview = () => {
-    if (previewTableData && previewTableName) {
+    if (previewTableData && previewTableName && onLoadTable) {
       // 加载表格到工作区
       onLoadTable(previewTableName, previewTableData);
       
@@ -436,7 +443,7 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!inputValue.trim() || isProcessingQuery) return;
 
     const userMessage: Message = {
@@ -506,7 +513,7 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
       }
       
       // 处理表格数据
-      if (data.tableData && data.tableName) {
+      if (data.tableData && data.tableName && onLoadTable) {
         // 加载表格到工作区
         onLoadTable(data.tableName, data.tableData);
       }
@@ -564,7 +571,9 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
 
   // 清空工作区
   const clearWorkspace = () => {
-    onLoadTable('', []);
+    if (onLoadTable) {
+      onLoadTable('', []);
+    }
     
     // 添加消息
     const message: Message = {
@@ -724,7 +733,7 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
       setShowTableEditor(false);
       
       // 如果当前工作区是这个表格，更新工作区
-      if (currentTableName === tableName) {
+      if (currentTableName === tableName && onLoadTable) {
         onLoadTable(tableName, data);
       }
       
@@ -806,83 +815,40 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
     }
   };
 
-  // 渲染表格管理器
-  const renderTableManager = () => {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">表格管理</h3>
-            <button
-              onClick={() => setShowTableManager(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          <div className="overflow-y-auto flex-1">
-            {availableTables.length > 0 ? (
-              <table className="min-w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-2 bg-gray-100 border">表格名称</th>
-                    <th className="px-4 py-2 bg-gray-100 border">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {availableTables.map((tableName) => (
-                    <tr key={tableName} className="border-t">
-                      <td className="px-4 py-2 border">{tableName}</td>
-                      <td className="px-4 py-2 border">
-                        <div className="flex space-x-2 justify-center">
-                          <button
-                            onClick={() => handleSelectTable(tableName)}
-                            className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs"
-                            title="预览表格"
-                          >
-                            预览
-                          </button>
-                          <button
-                            onClick={() => handleEditTable(tableName)}
-                            className="px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-xs"
-                            title="编辑表格"
-                          >
-                            编辑
-                          </button>
-                          <button
-                            onClick={() => handleDeleteTable(tableName)}
-                            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-                            title="删除表格"
-                          >
-                            删除
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="text-center py-8">
-                <p>没有可用的表格</p>
-              </div>
-            )}
-          </div>
-          
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={() => setShowTableManager(false)}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-            >
-              关闭
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+  // 处理加载表格
+  const handleLoadTable = (tableName: string) => {
+    const data = tableDataService.getTableData(tableName);
+    if (data && onLoadTable) {
+      onLoadTable(tableName, data);
+      setMessages(prev => [
+        ...prev,
+        {
+          content: `已加载表格 ${tableName} 到工作区，包含 ${data.length} 行数据。`,
+          type: 'assistant',
+          timestamp: new Date(),
+          messageType: 'text'
+        }
+      ]);
+    }
+  };
+
+  // 预览表格
+  const handlePreviewTable = (tableName: string) => {
+    try {
+      const tableData = tableDataService.getTableData(tableName);
+      
+      if (!tableData || !Array.isArray(tableData)) {
+        throw new Error(`表格 ${tableName} 不存在或格式无效`);
+      }
+      
+      setPreviewTableName(tableName);
+      setPreviewTableData(tableData);
+      setShowTablePreview(true);
+      
+    } catch (error) {
+      console.error('预览表格出错:', error);
+      alert(`预览表格出错: ${error instanceof Error ? error.message : String(error)}`);
+    }
   };
 
   if (!isVisible) {
@@ -900,21 +866,13 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
   }
 
   return (
-    <div
+    <div 
       ref={containerRef}
-      className={`fixed bottom-4 right-4 z-50 flex flex-col rounded-lg shadow-xl bg-white transition-all duration-300 ease-in-out ${
-        isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'
-      }`}
-      style={{
-        width: `${dimensions.width}px`,
-        height: isOpen ? `${dimensions.height}px` : 'auto',
-        resize: 'both',
-        overflow: 'hidden',
-      }}
+      className="flex flex-col h-full bg-white"
     >
       {/* 头部 */}
-      <div className="bg-blue-600 text-white px-4 py-3 rounded-t-lg flex justify-between items-center cursor-pointer" onClick={handleToggle}>
-        <div className="flex items-center ml-8">
+      <div className="bg-blue-600 text-white px-4 py-3 flex justify-between items-center">
+        <div className="flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
           </svg>
@@ -922,130 +880,92 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
         </div>
         <div className="flex space-x-2">
           <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              openTableManager();
-            }}
+            onClick={openTableManager}
             className="text-white hover:text-gray-200 transition-colors"
             title="管理表格"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              clearConversation();
-            }}
-            className="text-white hover:text-gray-200 transition-colors"
-            title="清除对话历史"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-            </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
           </button>
         <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClose();
-            }}
+            onClick={clearConversation}
             className="text-white hover:text-gray-200 transition-colors"
-          >
+            title="清除对话历史"
+        >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
           </svg>
         </button>
         </div>
       </div>
 
-      {isOpen && (
-        <>
-          {/* 工作区状态 */}
-          {currentTableName && (
-            <div className="bg-blue-50 px-4 py-2 border-b border-blue-100 flex justify-between items-center">
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <span className="text-xs text-blue-700">工作区: {currentTableName}</span>
-              </div>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleEditTable(currentTableName)}
-                  className="text-xs text-blue-600 hover:text-blue-800"
-                >
-                  编辑
-                </button>
-                <button
-                  onClick={clearWorkspace}
-                  className="text-xs text-blue-600 hover:text-blue-800"
-                >
-                  清除
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* 消息区域 */}
-          <div className="flex-1 p-4 overflow-y-auto custom-scrollbar" style={{ scrollbarWidth: 'thin' }}>
-            <div className="space-y-6">
-              {messages.map((message, index) => (
-                <div key={index}>
-                  {renderMessage(message, index)}
+      {/* 工作区状态 */}
+      {currentTableName && (
+        <div className="bg-blue-50 px-4 py-2 border-b border-blue-100 flex justify-between items-center">
+          <div className="flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <span className="text-xs text-blue-700">工作区: {currentTableName}</span>
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => handleEditTable(currentTableName)}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              编辑
+            </button>
+            <button
+              onClick={clearWorkspace}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              清除
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* 消息区域 */}
+      <div className="flex-1 p-4 overflow-y-auto custom-scrollbar" style={{ scrollbarWidth: 'thin' }}>
+        <div className="space-y-6">
+          {messages.map((message, index) => (
+            <div key={index}>
+              {renderMessage(message, index)}
           </div>
         ))}
         {isThinking && (
-                <div className="flex mb-4">
+            <div className="flex mb-4">
             <ThinkingAnimation />
           </div>
         )}
-            </div>
-        <div ref={messagesEndRef} />
+        </div>
       </div>
 
-          {/* 输入区域 */}
-          <div className="p-3 border-t border-gray-200">
-            <form onSubmit={handleSubmit} className="flex items-center space-x-2">
+      {/* 输入区域 */}
+      <div className="border-t border-gray-200 p-4">
+        <form onSubmit={handleSubmit} className="flex items-center">
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-                placeholder="输入您的问题..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={isProcessingQuery}
+            placeholder="输入您的问题..."
+            className="flex-1 border border-gray-300 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={isProcessingQuery}
           />
           <button
             type="submit"
-                className={`p-2 rounded-full ${isProcessingQuery ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white transition-colors`}
-                disabled={isProcessingQuery}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </form>
-          </div>
-          
-          {/* 调整大小的手柄 */}
-          <div 
-            ref={resizeRef}
-            className="absolute top-0 left-0 w-8 h-8 cursor-nwse-resize resize-handle flex items-center justify-center z-10"
-            onMouseDown={handleResizeStart}
-            title="拖动调整大小"
+            className={`bg-blue-600 text-white px-4 py-2 rounded-r-lg ${
+              isProcessingQuery ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+            }`}
+            disabled={isProcessingQuery}
           >
-            <svg 
-              width="14" 
-              height="14" 
-              viewBox="0 0 14 14" 
-              fill="currentColor" 
-              className="text-white hover:text-gray-200 transition-colors"
-            >
-              <path d="M1.5 12.5L12.5 1.5M1.5 8.5L8.5 1.5M1.5 4.5L4.5 1.5" strokeWidth="2" stroke="currentColor" strokeLinecap="round" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
             </svg>
-        </div>
-        </>
-      )}
+          </button>
+        </form>
+      </div>
       
       {/* 表格预览弹窗 */}
       {showTablePreview && previewTableData && (
@@ -1056,20 +976,83 @@ export const CustomAssistant: React.FC<CustomAssistantProps> = ({
           onLoadToWorkspace={handleLoadTableFromPreview}
         />
       )}
-
-      {/* 表格编辑模态框 */}
+      
+      {/* 表格编辑弹窗 */}
       {showTableEditor && editTableData && (
         <TableEditor
           tableName={editTableName}
           data={editTableData}
+          onCancel={() => setShowTableEditor(false)}
           onSave={handleSaveEditedTable}
           onSaveAsNew={handleSaveAsNewTable}
-          onCancel={() => setShowTableEditor(false)}
         />
       )}
-
-      {/* 表格管理模态框 */}
-      {showTableManager && renderTableManager()}
+      
+      {/* 表格管理器弹窗 */}
+      {showTableManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-3/4 max-w-4xl max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-lg font-semibold">表格管理</h2>
+              <button 
+                onClick={() => setShowTableManager(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 overflow-auto flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {availableTables.map((tableName) => (
+                  <div key={tableName} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-medium text-blue-600">{tableName}</h3>
+                      <div className="flex space-x-1">
+                        <button
+                          onClick={() => handleEditTable(tableName)}
+                          className="text-gray-500 hover:text-blue-600"
+                          title="编辑表格"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTable(tableName)}
+                          className="text-gray-500 hover:text-red-600"
+                          title="删除表格"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2 mt-4">
+                      <button
+                        onClick={() => handleLoadTable(tableName)}
+                        className="flex-1 bg-blue-600 text-white text-sm py-1 px-2 rounded hover:bg-blue-700"
+                      >
+                        加载到工作区
+                      </button>
+                      <button
+                        onClick={() => handlePreviewTable(tableName)}
+                        className="flex-1 bg-gray-200 text-gray-800 text-sm py-1 px-2 rounded hover:bg-gray-300"
+                      >
+                        预览
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-}; 
+};
+
+export default CustomAssistant; 

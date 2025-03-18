@@ -1,41 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { TableAgent } from '../../agents/tableAgent';
-import tableDataService from '../../services/tableDataService';
+import { tableAgent } from '@/app/services/tableAgent';
+import tableDataService from '@/app/services/tableDataService';
 
-// 创建一个全局的TableAgent实例
-let tableAgent: TableAgent | null = null;
-
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    // 解析请求体
-    const { query, workspaceTable, allTables } = await request.json();
-
-    // 如果客户端传递了所有表格数据，更新服务器端的tableDataService
-    if (allTables && typeof allTables === 'object') {
-      // 遍历所有表格数据并更新服务器端的tableDataService
-      Object.entries(allTables).forEach(([tableName, data]) => {
-        if (Array.isArray(data)) {
-          tableDataService.setTableDataDirect(tableName, data);
+    const body = await req.json();
+    const { query, workspaceTables, allTables } = body;
+    
+    // 如果客户端提供了所有表格数据，更新服务器端的tableDataService
+    if (allTables && Array.isArray(allTables)) {
+      // 清空现有表格并添加客户端提供的表格
+      const tableNames = tableDataService.getAllTableNames();
+      tableNames.forEach(name => {
+        if (!name.startsWith('sample_')) { // 保留示例表格
+          tableDataService.deleteTable(name);
+        }
+      });
+      
+      // 添加客户端提供的表格
+      allTables.forEach(table => {
+        if (table.name && Array.isArray(table.data)) {
+          tableDataService.addTable(table.name, table.data);
         }
       });
     }
-
-    // 如果tableAgent不存在，创建一个新的实例
-    if (!tableAgent) {
-      tableAgent = new TableAgent();
-    }
-
+    
     // 处理查询
-    const result = await tableAgent.processQuery(query, workspaceTable);
-
-    return NextResponse.json(result);
+    const response = await tableAgent.processQuery(query, workspaceTables);
+    
+    return NextResponse.json(response);
   } catch (error) {
-    console.error('处理查询出错:', error);
+    console.error('处理查询时出错:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : '处理查询时出错' 
-      },
+      { error: `处理查询时出错: ${error instanceof Error ? error.message : String(error)}` },
       { status: 500 }
     );
   }

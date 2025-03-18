@@ -105,6 +105,12 @@ export class TableAgent {
         description: '删除表格',
         parameters: tableToolsSchemas.deleteTable,
         function: tableTools.deleteTable
+      },
+      {
+        name: 'keywordAnalysis',
+        description: '使用Python算法对表格中的文本列进行关键词分析',
+        parameters: tableToolsSchemas.keywordAnalysis,
+        function: tableTools.keywordAnalysis
       }
     ];
 
@@ -124,6 +130,9 @@ export class TableAgent {
 10. deleteTableRow - 从表格删除行
 11. saveAsNewTable - 将表格另存为新表格
 12. deleteTable - 删除表格
+13. keywordAnalysis - 使用Python算法对表格中的文本列进行关键词分析，支持两种算法：
+   - simple: 简单词频统计，适合基本文本分析
+   - advanced: 高级NLP分析，提供更详细的文本统计和分析
 
 请根据用户的问题，选择合适的工具函数来回答。如果需要多个步骤来解决问题，请逐步执行并解释每一步的操作和结果。
 在回答中，请尽量使用表格形式展示数据结果，并提供简洁明了的分析和解释。
@@ -135,7 +144,11 @@ export class TableAgent {
 4. 如果用户的查询需要使用多个表格，但工作区中只有一个表格，可以建议用户加载其他相关表格，或者尝试使用joinTables工具连接其他表格。
 5. 当用户要求编辑表格时，请使用editTableCell、addTableRow或deleteTableRow工具函数。
 6. 当用户要求将表格另存为新表格时，请使用saveAsNewTable工具函数。
-7. 当用户要求删除表格时，请使用deleteTable工具函数，但要谨慎操作，确认用户真的想要删除表格。`;
+7. 当用户要求删除表格时，请使用deleteTable工具函数，但要谨慎操作，确认用户真的想要删除表格。
+8. 当用户要求进行文本分析或关键词统计时，请使用keywordAnalysis工具函数，并根据用户需求选择合适的算法：
+   - 如果用户需要简单的词频统计，使用simple算法
+   - 如果用户需要更详细的文本分析，使用advanced算法
+   - 如果用户没有明确指定算法，根据任务复杂度自行判断使用哪种算法`;
 
     // 初始化对话历史
     this.conversationHistory = [
